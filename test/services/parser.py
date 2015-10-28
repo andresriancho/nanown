@@ -12,6 +12,7 @@ import http.server
 
 
 class HashHandler(http.server.BaseHTTPRequestHandler):
+
     """
     """
 
@@ -22,13 +23,14 @@ class HashHandler(http.server.BaseHTTPRequestHandler):
         if 't=' in self.path and self.path.split('t=', 1)[1] == '1':
             do_parse = True
 
-        received = int(time.monotonic()/resolution)
+        received = int(time.monotonic() / resolution)
         if do_parse:
-            x = json.loads('[{"sampler_rtt": 58998274, "test_case": "short", "requests_rtt": 58528000, "sample": 32, "unix_time": 1425061969829780736, "local_port": 45387, "order": 0}, {"sampler_rtt": 59420191, "test_case": "long", "requests_rtt": 58036000, "sample": 32, "unix_time": 1425061969829780736, "local_port": 45386, "order": 1}]')
-        now = int(time.monotonic()/resolution)
-        
+            x = json.loads(
+                '[{"sampler_rtt": 58998274, "test_case": "short", "requests_rtt": 58528000, "sample": 32, "unix_time": 1425061969829780736, "local_port": 45387, "order": 0}, {"sampler_rtt": 59420191, "test_case": "long", "requests_rtt": 58036000, "sample": 32, "unix_time": 1425061969829780736, "local_port": 45386, "order": 1}]')
+        now = int(time.monotonic() / resolution)
+
         self.send_response(200)
-        self.send_header('Content-Type','text/plain; charset=UTF-8')
+        self.send_header('Content-Type', 'text/plain; charset=UTF-8')
         self.end_headers()
 
         content = "waited: %d\n" % (now - received)

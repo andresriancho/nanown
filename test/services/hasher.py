@@ -12,6 +12,7 @@ import http.server
 
 
 class HashHandler(http.server.BaseHTTPRequestHandler):
+
     """
     """
 
@@ -22,13 +23,13 @@ class HashHandler(http.server.BaseHTTPRequestHandler):
         if 't=' in self.path and self.path.split('t=', 1)[1] == '1':
             do_hash = True
 
-        received = int(time.monotonic()/resolution)
+        received = int(time.monotonic() / resolution)
         if do_hash:
             x = hashlib.md5(b'01234567').digest()
-        now = int(time.monotonic()/resolution)
-        
+        now = int(time.monotonic() / resolution)
+
         self.send_response(200)
-        self.send_header('Content-Type','text/plain; charset=UTF-8')
+        self.send_header('Content-Type', 'text/plain; charset=UTF-8')
         self.end_headers()
 
         content = "waited: %d\n" % (now - received)

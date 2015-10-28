@@ -1,44 +1,23 @@
 #!/usr/bin/env python3
 #-*- mode: Python;-*-
 
-import sys
-import os
-import time
 import random
-import tempfile
 import argparse
-import socket
-import json
-try:
-    import requests
-except:
-    sys.stderr.write('ERROR: Could not import requests module.  Ensure it is installed.\n')
-    sys.stderr.write('       Under Debian, the package name is "python3-requests"\n.')
-    sys.exit(1)
-
-VERSION = "{DEVELOPMENT}"
-if VERSION == "{DEVELOPMENT}":
-    script_dir = '.'
-    try:
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-    except:
-        try:
-            script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        except:
-            pass
-    sys.path.append("%s/../lib" % script_dir)
+import requests
 
 from nanownlib import *
 from nanownlib.platform import *
 from nanownlib.tcpts import *
 import nanownlib.storage
 
-parser = argparse.ArgumentParser(
-    description="")
+parser = argparse.ArgumentParser(description="")
 parser.add_argument('-c', dest='cases', type=str, default='{"short":10000,"long":13000}',
                     help='JSON representation of echo timing cases.')
-parser.add_argument('--no-tcpts', action='store_true', help='Disable TCP timestamp profiling')
-parser.add_argument('--no-control', action='store_true', help='Do not collect separate control data.  Instead, synthesize it from test and train data.')
+parser.add_argument('--no-tcpts', action='store_true',
+                    help='Disable TCP timestamp profiling')
+parser.add_argument('--no-control', action='store_true',
+                    help='Do not collect separate control data.  Instead,'
+                         ' synthesize it from test and train data.')
 parser.add_argument('session_name', default=None,
                     help='Name for the sampler session (used in output filenames)')
 parser.add_argument('sample_count', type=int, default=None,
@@ -51,9 +30,9 @@ options = parser.parse_args()
 
 
 num_samples = options.sample_count
-hostname    = options.host
-port        = options.port
-protocol    = 'http'
+hostname = options.host
+port = options.port
+protocol = 'http'
 
 cases = json.loads(options.cases)
 db_file = "%s.db" % options.session_name
@@ -68,9 +47,9 @@ def extractReportedRuntime(headers, body):
 def sendRequest(data=None):
     method = 'GET'
     path = '/?t=' + data
-    url = "%s://%s:%d%s" % (protocol,hostname,port,path)
+    url = "%s://%s:%d%s" % (protocol, hostname, port, path)
     headers = {}
-    body = (b'')
+    body = b''
     req = requests.Request('GET', url).prepare()
 
     retry = True
@@ -114,7 +93,10 @@ tcpts_previous = setTCPTimestamps(True)
 host_ip = socket.gethostbyname(hostname) 
 
 
-meta = {'tcpts_mean':None,'tcpts_stddev':None,'tcpts_slopes':None}
+meta = {'tcpts_mean': None,
+        'tcpts_stddev': None,
+        'tcpts_slopes':None}
+
 if not options.no_tcpts:
     sys.stderr.write("INFO: Probing target for TCP timestamp precision...\n")
     sniffer_fp = tempfile.NamedTemporaryFile('w+t')
@@ -160,7 +142,7 @@ def collectSamples(db, sample_type, count, sniffer):
         return
         
     sid = findNextSampleID(db)
-    for k in range(0,count):
+    for k in range(0, count):
         sample_order = list(cases.items())
         random.shuffle(sample_order)
         if sample_type.endswith('null'):
@@ -198,13 +180,13 @@ else:
 num_train = int((num_samples-num_control)/3)
 num_test = num_samples-num_train-num_control
 
-sample_types = [('train',num_train),
-                ('train_null',num_control),
-                ('test',num_test)]
+sample_types = [('train', num_train),
+                ('train_null', num_control),
+                ('test', num_test)]
 
 sniffer = snifferProcess(host_ip, port)
-for st,count in sample_types:
-    collectSamples(db, st,count,sniffer)
+for st, count in sample_types:
+    collectSamples(db, st, count, sniffer)
 
 
 #start = time.time()

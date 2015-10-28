@@ -1,29 +1,7 @@
 #!/usr/bin/env python3
 #-*- mode: Python;-*-
 
-import sys
-import os
-import time
-import random
-import statistics
-import functools
 import argparse
-import pprint
-import json
-
-
-VERSION = "{DEVELOPMENT}"
-if VERSION == "{DEVELOPMENT}":
-    script_dir = '.'
-    try:
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-    except:
-        try:
-            script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        except:
-            pass
-    sys.path.append("%s/../lib" % script_dir)
-
 
 from nanownlib import *
 from nanownlib.stats import *
@@ -37,14 +15,19 @@ parser = argparse.ArgumentParser(
     description="")
 #parser.add_argument('-c', dest='cases', type=str, default='{"short":10000,"long":1010000}',
 #                    help='JSON representation of echo timing cases. Default: {"short":10000,"long":1010000}')
-parser.add_argument('--unusual-case', action='store', default=None, help='Specify the unusual case and whether it is greater than the other cases.  Format: {case name},{1 or 0}')
-parser.add_argument('--retrain', action='append', default=[], help='Force a classifier to be retrained (and retested).  May be specified multiple times.')
-parser.add_argument('--retest', action='append', default=[], help='Force a classifier to be retested.  May be specified multiple times.')
+parser.add_argument('--unusual-case', action='store', default=None,
+                    help='Specify the unusual case and whether it is greater'
+                         ' than the other cases.  Format: {case name},{1 or 0}')
+parser.add_argument('--retrain', action='append', default=[],
+                    help='Force a classifier to be retrained (and retested).'
+                         ' May be specified multiple times.')
+parser.add_argument('--retest', action='append', default=[],
+                    help='Force a classifier to be retested.  May be specified'
+                         ' multiple times.')
 parser.add_argument('session_data', default=None,
                     help='Database file storing session information')
 options = parser.parse_args()
 db = nanownlib.storage.db(options.session_data)
-
 
 
 def trainClassifier(db, unusual_case, greater, classifier, retrain=False):
@@ -57,6 +40,7 @@ def trainClassifier(db, unusual_case, greater, classifier, retrain=False):
     num_obs = 7
     max_obs = int(db.populationSize('train')/5)
     result = None
+
     while num_obs < max_obs:
         num_obs = min(int(num_obs*1.5), max_obs)
         result = db.fetchClassifierResult(classifier, 'train', num_obs)
@@ -78,7 +62,6 @@ def trainClassifier(db, unusual_case, greater, classifier, retrain=False):
             break
 
     return result
-
 
 
 def testClassifier(db, unusual_case, greater, classifier, retest=False):
@@ -122,8 +105,8 @@ def testClassifier(db, unusual_case, greater, classifier, retest=False):
             test_time = '%8.2f' % (time.time()-start)
             
         print("num. observations: %5d | error: %6.2f | fp: %6.2f | fn: %6.2f | test time: %s"
-              % (num_obs,(fp+fn)/2.0,fp,fn,test_time))
-        return ((fp+fn)/2.0,result)
+              % (num_obs, (fp+fn)/2.0, fp, fn, test_time))
+        return (fp+fn)/2.0, result
     
     if retest:
         print("Dropping stored test results...")
@@ -140,10 +123,11 @@ def testClassifier(db, unusual_case, greater, classifier, retest=False):
         error,result = getResult(classifier,params,num_obs,num_trials)
         #print("walking up")
         while (error > target_error) and (num_obs < max_obs):
-            increase_factor = 1.5 * lte/math.log(error/100.0) # don't ask how I came up with this
+            # don't ask how I came up with this
+            increase_factor = 1.5 * lte/math.log(error/100.0)
             #print("increase_factor:", increase_factor)
             num_obs = min(int(increase_factor*num_obs), max_obs)
-            error,result = getResult(classifier,params,num_obs,num_trials)
+            error, result = getResult(classifier, params, num_obs, num_trials)
 
         #print("walking down")
         while (num_obs > 0):
@@ -170,7 +154,7 @@ else:
 
 
 for c in sorted(classifiers.keys()):
-    if classifiers[c]['train'] == None:
+    if classifiers[c]['train'] is None:
         continue
     start = time.time()
     print("Training %s..." % c)
@@ -194,14 +178,14 @@ best_error = sorted(best_error, key=lambda x: x['error'])
 winner = None
 for bo in best_obs:
     sys.stdout.write("%(num_observations)5d obs   | %(classifier)12s | %(params)s" % bo)
-    if winner == None:
+    if winner is None:
         sys.stdout.write(" (winner)")
         winner = bo
     print()
         
 for be in best_error:
     sys.stdout.write("%(error)3.2f%% error | %(classifier)12s | %(params)s" % be)
-    if winner == None:
+    if winner is None:
         sys.stdout.write(" (winner)")
         winner = be
     print()

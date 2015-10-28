@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+#-*- mode: Python;-*-
+
+import time
+import argparse
+
+from nanownlib import analyzeProbes
+import nanownlib.storage
+
+
+parser = argparse.ArgumentParser(description="")
+parser.add_argument('db_file', default=None,
+                    help='Database file')
+options = parser.parse_args()
+
+
+db = nanownlib.storage.db(options.db_file)
+
+#import cProfile
+#cProfile.run('num_probes = analyzeProbes(db)')
+
+start = time.time()
+num_probes = analyzeProbes(db, recompute=True)
+end = time.time()
+print("Analyzed %d probes' packets in: %f" % (num_probes, end-start))

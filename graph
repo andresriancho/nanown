@@ -1,52 +1,34 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-import time
-import random
-import tempfile
 import argparse
-import socket
-import json
 
 import numpy
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
-
-
-VERSION = "{DEVELOPMENT}"
-if VERSION == "{DEVELOPMENT}":
-    script_dir = '.'
-    try:
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-    except:
-        try:
-            script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        except:
-            pass
-    sys.path.append("%s/../lib" % script_dir)
 
 from nanownlib import *
 from nanownlib.stats import *
 import nanownlib.storage
 
 
-parser = argparse.ArgumentParser(
-    description="")
+parser = argparse.ArgumentParser(description="")
 parser.add_argument('db_file', default=None,
                     help='')
 parser.add_argument('unusual_case', nargs='?', type=str, default=None,
-                    help='The test case that is most unusual from the others. (default: auto detect)')
+                    help='The test case that is most unusual from the others.'
+                         ' (default: auto detect)')
 options = parser.parse_args()
 db = nanownlib.storage.db(options.db_file)
-if options.unusual_case == None:
-    unusual_case,delta = findUnusualTestCase(db)
+
+if options.unusual_case is None:
+    unusual_case, delta = findUnusualTestCase(db)
 
 
 def differences(db, unusual_case, rtt_type='packet'):
     ret_val = [s['unusual_'+rtt_type]-s['other_'+rtt_type] for s in db.subseries('train', unusual_case)]
     ret_val += [s['unusual_'+rtt_type]-s['other_'+rtt_type] for s in db.subseries('test', unusual_case)]
     return ret_val
+
 
 def null_differences(db, unusual_case, rtt_type='packet'):
     ret_val = [s['unusual_'+rtt_type]-s['other_'+rtt_type] for s in db.subseries('train_null', unusual_case)]
@@ -108,6 +90,7 @@ def basicStatistics():
 
 basicStatistics()
 
+
 def exampleBoxTestHistogram(low,high):
     num_bins = 300
     all = db.subseries('train',unusual_case)+db.subseries('test',unusual_case)
@@ -159,7 +142,7 @@ def testKalman4D(params=None):
     measurements = numpy.asarray([(s['unusual_packet'],s['other_packet'],s['unusual_tsval'],s['other_tsval']) for s in (train+test)])
     null_measurements = numpy.asarray([(s['unusual_packet'],s['other_packet'],s['unusual_tsval'],s['other_tsval']) for s in null])
     
-    if params == None:
+    if params is None:
         kf = KalmanFilter(n_dim_obs=4, n_dim_state=4,
                           initial_state_mean=[quadsummary([s['unusual_packet'] for s in train]),
                                               quadsummary([s['other_packet'] for s in train]),
@@ -251,7 +234,7 @@ def testKalman(params=None):
                                           quadsummary([s['other_packet'] for s in train])])
     #kf = AdditiveUnscentedKalmanFilter(n_dim_obs=2, n_dim_state=2)
 
-    if params == None:
+    if params is None:
         start=time.time()
         kf = kf.em(measurements[0:len(train)], n_iter=10,
                    em_vars=('transition_matrices',
@@ -414,7 +397,7 @@ def exampleSummaryHistogram():
 
 
 def plotSingleProbe(probe_id=None):
-    if probe_id == None:
+    if probe_id is None:
         cursor = db.conn.cursor()
         query="""SELECT probe_id FROM analysis WHERE suspect='' ORDER BY probe_id DESC limit 1 OFFSET 10"""
         cursor.execute(query)
@@ -454,7 +437,7 @@ def plotSingleProbe(probe_id=None):
 
 def graphTestResults():
     basename = os.path.basename(options.db_file)
-    basename,ext = os.path.splitext(basename)
+    basename, ext = os.path.splitext(basename)
 
     chartname = "/home/tim/blindspot/research/timing-analysis/paper/figures/results/%s.svg" % (basename)
     #print(chartname)
@@ -464,23 +447,23 @@ def graphTestResults():
     plt.xlabel('sample size')
     plt.ylabel('error rate')
     legend = []
-    colors = ['red','blue','green','purple','orange','black','brown']
+    colors = ['red', 'blue', 'green', 'purple', 'orange', 'black', 'brown']
     color_id = 0
 
-    best_obs,best_error = evaluateTestResults(db)
-    best_obs =   sorted(best_obs,   key=lambda x: x['num_observations'])
+    best_obs, best_error = evaluateTestResults(db)
+    best_obs = sorted(best_obs,   key=lambda x: x['num_observations'])
     best_error = sorted(best_error, key=lambda x: x['error'])
     winner = None
     for bo in best_obs:
         sys.stdout.write("%(num_observations)d obs / %(classifier)s / %(params)s" % bo)
-        if winner == None:
+        if winner is None:
             sys.stdout.write(" (winner)")
             winner = bo
         print()
         
     for be in best_error:
         sys.stdout.write("%(error)f%% error / %(classifier)s / %(params)s" % be)
-        if winner == None:
+        if winner is None:
             sys.stdout.write(" (winner)")
             winner = be
         print()
@@ -488,7 +471,7 @@ def graphTestResults():
     all = sorted(best_obs+best_error, key=lambda x: x['classifier'])
     max_obs = 0
     for result in all:
-        query="""
+        query = """
         SELECT num_observations,(false_positives+false_negatives)/2.0 FROM classifier_results 
         WHERE trial_type='test'
          AND classifier=:classifier
@@ -532,9 +515,9 @@ plt.clf()
 plt.title("Packet RTT over time")
 plt.xlabel('Time of Day')
 plt.ylabel('RTT')
-s = plt.scatter([t for t,rtt in short_overtime], [rtt for t,rtt in short_overtime], s=1, color='red', alpha=0.6)
-l = plt.scatter([t for t,rtt in long_overtime], [rtt for t,rtt in long_overtime], s=1, color='blue', alpha=0.6)
-d = plt.scatter([t for t,rtt in diff_overtime], [rtt for t,rtt in diff_overtime], s=1, color='purple', alpha=0.6)
+s = plt.scatter([t for t,rtt in short_overtime], [rtt for t, rtt in short_overtime], s=1, color='red', alpha=0.6)
+l = plt.scatter([t for t,rtt in long_overtime], [rtt for t, rtt in long_overtime], s=1, color='blue', alpha=0.6)
+d = plt.scatter([t for t,rtt in diff_overtime], [rtt for t, rtt in diff_overtime], s=1, color='purple', alpha=0.6)
 plt.legend((s,l,d), ('short','long','difference'), scatterpoints=1)
 #plt.savefig('paper/figures/comcast-powerboost1.png')
 plt.show()
@@ -547,11 +530,11 @@ plt.xlabel('Time of Day')
 plt.ylabel('')
 s = plt.scatter(sent_times, [2]*len(sent_times), s=3, color='red', alpha=0.9)
 r = plt.scatter(rcvd_times, [1]*len(rcvd_times), s=3, color='blue', alpha=0.9)
-plt.legend((s,r), ('sent','received'), scatterpoints=1)
+plt.legend((s, r), ('sent', 'received'), scatterpoints=1)
 plt.show()
 
 sys.exit(0)
-short_overtime,long_overtime,diff_overtime = None,None,None
+short_overtime, long_overtime, diff_overtime = None, None, None
 
 
 num_bins = 300

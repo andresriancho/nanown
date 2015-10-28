@@ -6,52 +6,33 @@ effort [discussed at BlackHat 2015](https://www.blackhat.com/us-15/briefings.htm
 This project is still highly experimental and not particularly easy to
 use at this point.
 
-
-# Prerequisites
-
-Linux and Python 3.4+ are required.  Yes, really, your Python needs to
-be that new.  You will also need to install the following modules for
-this version of Python:
-```
-requests
-numpy
-netifaces 
-matplotlib
-```
-On Debian unstable, you can get these by running:
-```
-apt-get install python3-requests python3-numpy python3-netifaces python3-matplotlib
-```
-If you can't get the appropriate packages from your distro, resort to `pip3`.
-
-In addition, you'll need to have a C compiler and the development
-package for libpcap installed.  Under Debian this is probably sufficient:
-```
-apt-get install libpcap-dev gcc
-```
-
-
 # Installation
 
-Hah! Funny.
+Linux and Python 3.4+ are required.  Yes, really, your Python needs to
+be that new.  You will also need to install the following libraries and modules:
 
-Currently there's no installation script...
+```bash
+sudo apt-get install python3 python3-pip libfreetype6-dev libpcap-dev gcc python3-dev
 
-To attempt to use this code, clone the repository and build the
-`nanown-listen` tool with:
+git clone https://github.com/ecbftw/nanown.git
+cd nanown
+
+pip3 install -r requirements.txt
 ```
-cd nanown/trunk/src && ./compile.sh
+
+Then build the `nanown-listen` tool with:
+```bash
+cd src 
+./compile.sh
 ```
 
-That will drop the `nanown-listen` binary under nanown/trunk/bin.  You
-must then put this directory in your `$PATH` in order to perform any
-data collection.
+That will create the `nanown-listen` binary in `nanown`'s root directory.
 
-To run any of the other scripts, change to the nanown/trunk directory
+To run any of the other scripts, change to the nanown root directory
 and run them directly from there.  E.g.:
 ```
-bin/train ...args...
-bin/graph ...args...
+./train ...args...
+./graph ...args...
 ```
 
 

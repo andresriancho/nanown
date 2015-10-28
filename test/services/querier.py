@@ -16,19 +16,19 @@ disk = sqlite3.connect('/var/tmp/x.db')
 memc = mem.cursor()
 diskc = disk.cursor()
 
-q='''CREATE TABLE user
+q = '''CREATE TABLE user
      (username text, pwdhash text, other text, data real, stuff real)'''
 memc.execute(q)
 diskc.execute(q)
-q="INSERT INTO user VALUES ('jack','010203040506070809000A0B0C0D0E0F','hello',42,3.1415926535)"
+q = "INSERT INTO user VALUES ('jack','010203040506070809000A0B0C0D0E0F','hello',42,3.1415926535)"
 memc.execute(q)
 diskc.execute(q)
 mem.commit()
 disk.commit()
 
 
-
 class HashHandler(http.server.BaseHTTPRequestHandler):
+
     """
     """
 
@@ -43,13 +43,13 @@ class HashHandler(http.server.BaseHTTPRequestHandler):
             elif t == '2':
                 conn = diskc
 
-        received = int(time.monotonic()/resolution)
+        received = int(time.monotonic() / resolution)
         if conn != None:
             x = conn.execute("SELECT * FROM user WHERE username='jack'")
-        now = int(time.monotonic()/resolution)
-        
+        now = int(time.monotonic() / resolution)
+
         self.send_response(200)
-        self.send_header('Content-Type','text/plain; charset=UTF-8')
+        self.send_header('Content-Type', 'text/plain; charset=UTF-8')
         self.end_headers()
 
         content = "waited: %d\n" % (now - received)
