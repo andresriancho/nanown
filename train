@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 #-*- mode: Python;-*-
 
+import sys
+import json
+import math
+import time
 import argparse
+import functools
+import statistics
 
-from nanownlib import *
-from nanownlib.stats import *
-from nanownlib.train import *
-from nanownlib.parallel import WorkerThreads
 import nanownlib.storage
 
+from nanownlib.misc import findUnusualTestCase, evaluateTestResults
+from nanownlib.train import classifiers
+from nanownlib.stats import bootstrap3
 
-
-parser = argparse.ArgumentParser(
-    description="")
+parser = argparse.ArgumentParser(description="")
 #parser.add_argument('-c', dest='cases', type=str, default='{"short":10000,"long":1010000}',
 #                    help='JSON representation of echo timing cases. Default: {"short":10000,"long":1010000}')
 parser.add_argument('--unusual-case', action='store', default=None,

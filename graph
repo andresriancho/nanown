@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 
+import os
+import sys
+import time
 import argparse
 
 import numpy
-import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
-
-from nanownlib import *
-from nanownlib.stats import *
 import nanownlib.storage
+
+from nanownlib.stats import (midsummary, mad, quadsummary, septasummary,
+                             weightedMean, invertedWeights, trustValues,
+                             arctanWeights, linearWeights, prunedWeights)
+from nanownlib.misc import findUnusualTestCase, evaluateTestResults
 
 
 parser = argparse.ArgumentParser(description="")
@@ -44,10 +48,13 @@ def timeSeries(db, probe_type, unusual_case):
                                            WHERE analysis.probe_id=probes.id AND probes.test_case =:unusual_case AND probes.type=:probe_type) u
     """
     
-    params = {"probe_type":probe_type,"unusual_case":unusual_case}
+    params = {"probe_type": probe_type,
+              "unusual_case": unusual_case}
     cursor.execute(query, params)
     for row in cursor:
-        yield {'time_of_day':row['time_of_day'],unusual_case:row['uc'],'other_cases':row['oc']}
+        yield {'time_of_day': row['time_of_day'],
+               unusual_case: row['uc'],
+               'other_cases': row['oc']}
 #samples,derived,null_derived = parse_data(input1)
 
 #trust = trustValues(derived, sum)
@@ -150,7 +157,7 @@ def testKalman4D(params=None):
                                               numpy.mean([s['other_tsval'] for s in train])])
         kf = KalmanFilter(n_dim_obs=4, n_dim_state=4)
         
-        start=time.time()
+        start = time.time()
         kf = kf.em(measurements[0:len(train)]+null_measurements[0:50000], n_iter=10,
                    em_vars=('transition_matrices',
                             'observation_matrices',
@@ -628,7 +635,8 @@ plt.show()
 
 
 
-subsample_sizes = (50,150,300,400,500,700,1000,2000,3000,4000,5000,7000,10000)
+subsample_sizes = (50, 150, 300, 400, 500, 700, 1000, 2000, 3000, 4000, 5000,
+                   7000, 10000)
 estimator = diffMedian
 performance = []
 for subsample_size in subsample_sizes:

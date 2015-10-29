@@ -3,9 +3,9 @@
 
 import time
 import argparse
-
-from nanownlib import analyzeProbes
 import nanownlib.storage
+
+from nanownlib.misc import analyzeProbes
 
 
 parser = argparse.ArgumentParser(description="")

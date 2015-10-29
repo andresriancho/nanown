@@ -3,3 +3,4 @@ numpy
 netifaces 
 matplotlib
 pykalman
+scipy

@@ -14,8 +14,8 @@ import nanownlib.storage
 
 from nanownlib.platform import setCPUAffinity, setTCPTimestamps
 from nanownlib.train import classifiers
-from nanownlib import (startSniffer, stopSniffer, associatePackets,
-                       analyzeProbes)
+from nanownlib.network import startSniffer, stopSniffer
+from nanownlib.misc import analyzeProbes, associatePackets
 
 
 parser = argparse.ArgumentParser(description="")

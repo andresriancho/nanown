@@ -14,8 +14,8 @@ import nanownlib.storage
 from nanownlib.tcpts import computeTimestampPrecision, runTimestampProbes
 from nanownlib.platform import (setCPUAffinity, setLowLatency,
                                 setPowersave, setTCPTimestamps)
-from nanownlib import (analyzeProbes, snifferProcess, startSniffer,
-                       stopSniffer, associatePackets)
+from nanownlib.network import startSniffer, stopSniffer, snifferProcess
+from nanownlib.misc import analyzeProbes, associatePackets
 
 
 parser = argparse.ArgumentParser(description="")
