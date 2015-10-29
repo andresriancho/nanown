@@ -9,7 +9,8 @@ from nanownlib.misc import analyzeProbes
 
 
 parser = argparse.ArgumentParser(description="")
-parser.add_argument('db_file', default=None,
+parser.add_argument('db_file',
+                    default=None,
                     help='Database file')
 options = parser.parse_args()
 

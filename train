@@ -47,7 +47,7 @@ def trainClassifier(db, unusual_case, greater, classifier, retrain=False):
     while num_obs < max_obs:
         num_obs = min(int(num_obs*1.5), max_obs)
         result = db.fetchClassifierResult(classifier, 'train', num_obs)
-        if result != None:
+        if result is not None:
             train_time = "(stored)"
         else:
             start = time.time()
@@ -133,27 +133,27 @@ def testClassifier(db, unusual_case, greater, classifier, retest=False):
             error, result = getResult(classifier, params, num_obs, num_trials)
 
         #print("walking down")
-        while (num_obs > 0):
+        while num_obs > 0:
             num_obs = int(0.95*num_obs)
-            error,result = getResult(classifier,params,num_obs,num_trials)
+            error,result = getResult(classifier, params, num_obs, num_trials)
             if error > target_error:
                 break
     
 
-if options.unusual_case != None:
-    unusual_case,greater = options.unusual_case.split(',')
+if options.unusual_case is not None:
+    unusual_case, greater = options.unusual_case.split(',')
     greater = bool(int(greater))
-    db.setUnusualCase(unusual_case,greater)
+    db.setUnusualCase(unusual_case, greater)
 else:
     ucg = db.getUnusualCase()
-    if ucg != None:
-        unusual_case,greater = ucg
+    if ucg is not None:
+        unusual_case, greater = ucg
         print("Using cached unusual_case:", unusual_case)
     else:
-        unusual_case,delta = findUnusualTestCase(db)
+        unusual_case, delta = findUnusualTestCase(db)
         greater = (delta > 0)
-        print("Auto-detected unusual_case '%s' with delta: %d" %  (unusual_case,delta))
-        db.setUnusualCase(unusual_case,greater)
+        print("Auto-detected unusual_case '%s' with delta: %d" % (unusual_case,delta))
+        db.setUnusualCase(unusual_case, greater)
 
 
 for c in sorted(classifiers.keys()):
@@ -175,8 +175,8 @@ for c in sorted(classifiers.keys()):
     print("completed in: %8.2f\n"% (time.time()-start))
 
 
-best_obs,best_error = evaluateTestResults(db)
-best_obs =   sorted(best_obs,   key=lambda x: x['num_observations'])
+best_obs, best_error = evaluateTestResults(db)
+best_obs = sorted(best_obs,   key=lambda x: x['num_observations'])
 best_error = sorted(best_error, key=lambda x: x['error'])
 winner = None
 for bo in best_obs:

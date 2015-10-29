@@ -27,7 +27,9 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
     """
     # TODO: check for "N" in suspect field and return a flag
 
-    params = {"strim": strim, "rtrim": rtrim, "unusual_case": unusual_case}
+    params = {'strim': strim,
+              'rtrim': rtrim,
+              'unusual_case': unusual_case}
     cursor.execute(query, params)
     differences = [row[0] for row in cursor]
 

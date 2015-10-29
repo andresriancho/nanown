@@ -15,13 +15,14 @@ from nanownlib.tcpts import computeTimestampPrecision, runTimestampProbes
 from nanownlib.platform import (setCPUAffinity, setLowLatency,
                                 setPowersave, setTCPTimestamps)
 from nanownlib.network import startSniffer, stopSniffer, snifferProcess
-from nanownlib.misc import analyzeProbes, associatePackets
+from nanownlib.misc import associatePackets
 
 
 parser = argparse.ArgumentParser(description="")
 parser.add_argument('-c', dest='cases', type=str,
                     default='{"short":10000,"long":13000}',
-                    help='JSON representation of echo timing cases.')
+                    help='JSON representation of echo timing cases.',
+                    required=True)
 parser.add_argument('--no-tcpts', action='store_true',
                     help='Disable TCP timestamp profiling')
 parser.add_argument('--no-control', action='store_true',
@@ -226,12 +227,6 @@ for st, count in sample_types:
     
 if options.no_control:
     print("TODO: implement control synthesizing!")
-
-start = time.time()
-num_probes = analyzeProbes(db)
-end = time.time()
-print("analyzed %d probes' packets in: %f" % (num_probes, end-start))
-
 
 # XXX: test this to see if it actually helps
 setPowersave(True)
