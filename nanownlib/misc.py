@@ -1,6 +1,7 @@
 import sys
 import json
 import time
+import logging
 import datetime
 import statistics
 import pprint
@@ -25,7 +26,7 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
       FROM (SELECT probes.sample s,packet_rtt FROM probes,trim_analysis WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case=:unusual_case AND probes.type in ('train','test')) u
     """
     # TODO: check for "N" in suspect field and return a flag
-    print('Getting information from SQLite DB')
+    logging.debug('Getting information from SQLite DB')
 
     params = {'strim': strim,
               'rtrim': rtrim,
@@ -33,7 +34,8 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
     cursor.execute(query, params)
     differences = [row[0] for row in cursor]
 
-    print('Calculating stats')
+    logging.debug('Calculating stats')
+    logging.debug(differences)
     septasummary_result = septasummary(differences)
     mad_result = mad(differences)
 
@@ -59,7 +61,7 @@ def analyzeProbes(db, trim=None, recompute=False):
         db.conn.commit()
 
     def loadPackets(db):
-        print('Loading packets...')
+        logging.debug('Loading packets...')
 
         cursor = db.conn.cursor()
         # cursor.execute("SELECT * FROM packets ORDER BY probe_id")
@@ -79,11 +81,11 @@ def analyzeProbes(db, trim=None, recompute=False):
             entry.append(dict(p))
         ret_val.append((probe_id, entry))
 
-        print('Done!')
+        logging.debug('Done!')
         return ret_val
 
     def processPackets(packet_cache, strim, rtrim):
-        print('Processing packets...')
+        logging.debug('Processing packets...')
 
         sent_tally = []
         rcvd_tally = []
@@ -104,7 +106,7 @@ def analyzeProbes(db, trim=None, recompute=False):
         db.conn.commit()
 
         result = statistics.mode(sent_tally), statistics.mode(rcvd_tally)
-        print('Done!')
+        logging.debug('Done!')
         return result
 
     # start = time.time()
@@ -117,7 +119,7 @@ def analyzeProbes(db, trim=None, recompute=False):
     else:
         num_sent, num_rcvd = processPackets(packet_cache, 0, 0)
         args = (num_sent, num_rcvd)
-        print("Process packet output num_sent: %d, num_rcvd: %d" % args)
+        logging.debug("Process packet output num_sent: %d, num_rcvd: %d" % args)
 
         current = 0
         total = num_sent * num_rcvd
@@ -127,7 +129,7 @@ def analyzeProbes(db, trim=None, recompute=False):
                 current += 1
 
                 args = (current, total, strim, rtrim)
-                print('[%s/%s] Processing packets strim: %s | rtrim %s' % args)
+                logging.debug('[%s/%s] Processing packets strim: %s | rtrim %s' % args)
 
                 if strim == 0 and rtrim == 0:
                     # no point in doing 0,0 again
@@ -141,7 +143,7 @@ def analyzeProbes(db, trim=None, recompute=False):
         for strim in range(0, num_sent):
             for rtrim in range(0, num_rcvd):
                 current += 1
-                print('Evaluate trim %s/%s' % (current, total))
+                logging.info('Evaluate trim %s/%s' % (current, total))
                 evaluations[(strim, rtrim)] = evaluateTrim(db, unusual_case,
                                                            strim, rtrim)
 

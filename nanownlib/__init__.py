@@ -1,6 +1,11 @@
 import http.client
 import requests
 
+from .utils.log import configure_logging
+
+DEBUG = True
+configure_logging(DEBUG)
+
 
 # Monkey patching that instruments the HTTPResponse to collect connection
 # source port info

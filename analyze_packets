@@ -2,13 +2,14 @@
 #-*- mode: Python;-*-
 
 import time
+import logging
 import argparse
 import nanownlib.storage
 
 from nanownlib.misc import analyzeProbes
 
 
-parser = argparse.ArgumentParser(description="")
+parser = argparse.ArgumentParser(description='')
 parser.add_argument('db_file',
                     default=None,
                     help='Database file')
@@ -23,4 +24,4 @@ db = nanownlib.storage.db(options.db_file)
 start = time.time()
 num_probes = analyzeProbes(db, recompute=True)
 end = time.time()
-print("Analyzed %d probes' packets in: %f" % (num_probes, end-start))
+logging.info("Analyzed %d probes' packets in: %f" % (num_probes, end-start))
