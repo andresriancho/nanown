@@ -28,7 +28,7 @@ cd src
 
 That will create the `nanown-listen` binary in `nanown`'s root directory.
 
-To run any of the other scripts, change to the nanown root directory
+To run any of the other scripts, change to the `nanown` root directory
 and run them directly from there.  E.g.:
 ```
 ./train ...args...

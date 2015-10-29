@@ -1,4 +1,3 @@
-
 import multiprocessing
 
 
@@ -33,8 +32,9 @@ previous_governors = None
 def setPowersave(enabled):
     global previous_governors
     cpus = multiprocessing.cpu_count()
+
     if enabled:
-        if previous_governors == None:
+        if previous_governors is None:
             previous_governors = [b"powersave"] * cpus
         new_governors = previous_governors
     else:

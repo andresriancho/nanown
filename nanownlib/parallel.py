@@ -1,5 +1,3 @@
-#
-
 import sys
 import threading
 import queue
@@ -25,7 +23,7 @@ class WorkerThreads(object):
     def _worker(self):
         while True:
             item = self.workq.get()
-            if item == None:
+            if item is None:
                 self.workq.task_done()
                 break
 
@@ -51,7 +49,7 @@ class WorkerThreads(object):
             while True:
                 self.workq.get(block=False)
                 self.workq.task_done()
-        except queue.Empty as e:
+        except queue.Empty:
             pass
 
         for i in range(len(self.workers)):

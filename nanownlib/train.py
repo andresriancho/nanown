@@ -1,7 +1,7 @@
 import json
 
 from .stats import *
-from .nanownlib.parallel import WorkerThreads
+from .parallel import WorkerThreads
 
 
 def trainBoxTest(db, unusual_case, greater, num_observations):

@@ -1,19 +1,11 @@
 #-*- mode: Python;-*-
 
-import sys
 import os
 import uuid
 import random
 import threading
 import sqlite3
-try:
-    import numpy
-except:
-    sys.stderr.write(
-        'ERROR: Could not import numpy module.  Ensure it is installed.\n')
-    sys.stderr.write(
-        '       Under Debian, the package name is "python3-numpy"\n.')
-    sys.exit(1)
+import numpy
 
 # Don't trust numpy's seeding
 numpy.random.seed(random.SystemRandom().randint(0, 2 ** 32 - 1))
@@ -154,9 +146,9 @@ class db(threading.local):
 
         population = self._population_cache[cache_key]
 
-        if size == None or size > len(population):
+        if size is None or size > len(population):
             size = len(population)
-        if offset == None or offset >= len(population) or offset < 0:
+        if offset is None or offset >= len(population) or offset < 0:
             offset = self._offset_cache[cache_key][
                 self._cur_offsets[cache_key]]
             self._cur_offsets[cache_key] = (
@@ -271,7 +263,7 @@ class db(threading.local):
         cursor = self.conn.cursor()
         cursor.execute(query)
         row = cursor.fetchone()
-        if row == None:
+        if row is None:
             params = {"id": _newid()}
         else:
             params = dict(row)
@@ -292,7 +284,7 @@ class db(threading.local):
         cursor = self.conn.cursor()
         cursor.execute(query)
         row = cursor.fetchone()
-        if row == None or row[0] == None or row[1] == None:
+        if row is None or row[0] is None or row[1] is None:
             return None
         else:
             return tuple(row)

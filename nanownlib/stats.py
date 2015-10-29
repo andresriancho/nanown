@@ -1,19 +1,8 @@
-
-import sys
-import os
 import functools
 import math
 import statistics
-import gzip
 import random
-try:
-    import numpy
-except:
-    sys.stderr.write(
-        'ERROR: Could not import numpy module.  Ensure it is installed.\n')
-    sys.stderr.write(
-        '       Under Debian, the package name is "python3-numpy"\n.')
-    sys.exit(1)
+import numpy
 
 # Don't trust numpy's seeding
 numpy.random.seed(random.SystemRandom().randint(0, 2 ** 32 - 1))
@@ -56,8 +45,7 @@ def OLSRegression(x, y):
     # plt.scatter(x, y)
     # plt.plot(x, m*x + c, 'r', label='Fitted line')
     # plt.show()
-
-    return (m, c)
+    return m, c
 
 
 def difference(ls):
@@ -348,7 +336,7 @@ def kfilter(params, observations):
             est.append(kf.x)
             var.append(kf.P)
 
-    return({'est': est, 'var': var})
+    return {'est': est, 'var': var}
 
 
 def kalmanTest(params, greater, samples):

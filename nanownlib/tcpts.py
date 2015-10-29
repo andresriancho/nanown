@@ -3,9 +3,10 @@ import socket
 import queue
 import statistics
 import threading
+import time
 import json
 
-from .nanownlib.stats import OLSRegression
+from .stats import OLSRegression
 
 
 def trickleHTTPRequest(ip, port, hostname):
@@ -98,6 +99,6 @@ def computeTimestampPrecision(sniffer_fp, ports):
 
     m = statistics.mean(slopes)
     if len(slopes) == 1:
-        return (m, None, slopes)
+        return m, None, slopes
     else:
-        return (m, statistics.stdev(slopes), slopes)
+        return m, statistics.stdev(slopes), slopes

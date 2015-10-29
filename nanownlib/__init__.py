@@ -10,17 +10,9 @@ import subprocess
 import tempfile
 import json
 import statistics
+import requests
 
-try:
-    import requests
-except:
-    sys.stderr.write(
-        'ERROR: Could not import requests module.  Ensure it is installed.\n')
-    sys.stderr.write(
-        '       Under Debian, the package name is "python3-requests"\n.')
-    sys.exit(1)
-
-from .nanownlib.stats import *
+from .stats import septasummary, mad, quadsummary
 
 
 def getLocalIP(remote_host, remote_port):
@@ -78,13 +70,13 @@ class snifferProcess(object):
         if self._proc:
             self._proc.terminate()
             self._proc.wait(2)
-            if self._proc.poll() == None:
+            if self._proc.poll() is None:
                 self._proc.kill()
                 self._proc.wait(1)
             self._proc = None
 
     def is_running(self):
-        return (self._proc.poll() == None)
+        return self._proc.poll() is None
 
     def __del__(self):
         self.stop()
@@ -101,7 +93,7 @@ def startSniffer(target_ip, target_port, output_file):
 def stopSniffer(sniffer):
     sniffer.terminate()
     sniffer.wait(2)
-    if sniffer.poll() == None:
+    if sniffer.poll() is None:
         sniffer.kill()
         sniffer.wait(1)
 
@@ -127,7 +119,7 @@ def removeDuplicatePackets(packets):
     # correct
     for p in packets:
         key = (p['sent'], p['tcpseq'], p['tcpack'], p['payload_len'])
-        if (key not in seen):
+        if key not in seen:
             seen[key] = p
             continue
         if p['sent'] == 1 and (seen[key]['observed'] > p['observed']):  # earliest sent
@@ -248,7 +240,7 @@ def analyzeProbes(db, trim=None, recompute=False):
         entry = []
         ret_val = []
         for p in cursor:
-            if probe_id == None:
+            if probe_id is None:
                 probe_id = p['probe_id']
             if p['probe_id'] != probe_id:
                 ret_val.append((probe_id, entry))
@@ -465,7 +457,7 @@ def evaluateTestResults(db):
         """
         cursor.execute(query, {'classifier': classifier})
         row = cursor.fetchone()
-        if row == None:
+        if row is None:
             query = """
             SELECT classifier,params,num_observations,(false_positives+false_negatives)/2 error
             FROM classifier_results
@@ -475,7 +467,7 @@ def evaluateTestResults(db):
             """
             cursor.execute(query, {'classifier': classifier})
             row = cursor.fetchone()
-            if row == None:
+            if row is None:
                 sys.stderr.write(
                     "WARN: couldn't find test results for classifier '%s'.\n" % classifier)
                 continue
