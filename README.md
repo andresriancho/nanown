@@ -107,7 +107,4 @@ under the GNU GPL version 3.  See the LICENSE file for details.
 ## Contributing
 
 We certainly welcome and encourage code contributions, no matter how
-small. Currently, this GitHub repository is a mirror of an SVN
-repository. Please don't submit pull requests.  Instead, just contact us
-through the issue tracker and send us a patch if needed.  We may switch
-to git later.
+small. Please do submit pull requests!
