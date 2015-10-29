@@ -42,8 +42,14 @@ def setPowersave(enabled):
 
     previous_governors = []
     for c in range(cpus):
-        fh = open('/sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor' %
-                  c, 'r+b')
+        gov_file = '/sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor' % c
+
+        try:
+            fh = open(gov_file, 'r+b')
+        except FileNotFoundError:
+            # Some VPS servers don't have this file
+            continue
+
         previous_governors.append(fh.read())
         fh.seek(0)
         fh.write(new_governors[c])
