@@ -1,5 +1,14 @@
-# Created by .ignore support plugin (hsz.mobi)
+# Ignore the compiled binary
 nanown-listen
-virtualenv/
 
+# Ignore python specific stuff
+virtualenv/
 __pycache__
+*.pyc
+
+# Databases
+*.db
+
+# Ignore my attack definitions
+custom-sampler.py
+
