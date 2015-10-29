@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
 #-*- mode: Python;-*-
 
+import time
+import json
 import random
 import argparse
 import requests
+import tempfile
+import socket
 
-from nanownlib import *
-from nanownlib.platform import *
-from nanownlib.tcpts import *
 import nanownlib.storage
 
+from nanownlib.tcpts import computeTimestampPrecision, runTimestampProbes
+from nanownlib.platform import (setCPUAffinity, setLowLatency,
+                                setPowersave, setTCPTimestamps)
+from nanownlib import (analyzeProbes, snifferProcess, startSniffer,
+                       stopSniffer, associatePackets)
+
+
 parser = argparse.ArgumentParser(description="")
-parser.add_argument('-c', dest='cases', type=str, default='{"short":10000,"long":13000}',
+parser.add_argument('-c', dest='cases', type=str,
+                    default='{"short":10000,"long":13000}',
                     help='JSON representation of echo timing cases.')
 parser.add_argument('--no-tcpts', action='store_true',
                     help='Disable TCP timestamp profiling')
@@ -19,7 +28,8 @@ parser.add_argument('--no-control', action='store_true',
                     help='Do not collect separate control data.  Instead,'
                          ' synthesize it from test and train data.')
 parser.add_argument('session_name', default=None,
-                    help='Name for the sampler session (used in output filenames)')
+                    help='Name for the sampler session (used in output'
+                         ' filenames)')
 parser.add_argument('sample_count', type=int, default=None,
                     help='Number of samples to collect')
 parser.add_argument('host', default=None,
@@ -28,7 +38,7 @@ parser.add_argument('port', nargs='?', type=int, default=80,
                     help='TCP port number of HTTP service (default: 80)')
 options = parser.parse_args()
 
-
+# TODO: Configure protocol using command line arguments
 num_samples = options.sample_count
 hostname = options.host
 port = options.port
@@ -61,14 +71,14 @@ def sendRequest(data=None):
             reported = extractReportedRuntime(response.headers, response.text)
             retry = False
         except Exception as e:
-            sys.stderr.write("ERROR: HTTP request problem: %s\n" % repr(e))
+            print("ERROR: HTTP request problem: %s\n" % repr(e))
             time.sleep(1.0)
-            sys.stderr.write("ERROR: retrying...\n")
+            print("ERROR: retrying...\n")
 
         
-    return {'userspace_rtt':response.elapsed.microseconds*1000,
-            'reported':reported,
-            'local_port':response.raw._original_response.local_address[1]}
+    return {'userspace_rtt': response.elapsed.microseconds*1000,
+            'reported': reported,
+            'local_port': response.raw._original_response.local_address[1]}
 
 
 def fetch(probedata, data):
@@ -80,46 +90,58 @@ def fetch(probedata, data):
 
 
 setCPUAffinity()
-time.sleep(0.25) # Give our process a chance to migrate to a different CPU if necessary
-setPowersave(False) # XXX: test this to see if it helps
-setLowLatency(True) # XXX: test this to see if it helps
+# Give our process a chance to migrate to a different CPU if necessary
+time.sleep(0.25)
+
+# XXX: test this to see if it helps
+setPowersave(False)
+setLowLatency(True)
+
 tcpts_previous = setTCPTimestamps(True)
 
 
 #XXX: what about multiple A records?
-#     perform this during a script generation step, measuring lowest latency server
-#     and hard-coding the IP and host name separately.  However, including all
-#     server IPs in comments
+#     perform this during a script generation step, measuring lowest latency
+#     server and hard-coding the IP and host name separately.  However,
+#     including all server IPs in comments
 host_ip = socket.gethostbyname(hostname) 
 
 
 meta = {'tcpts_mean': None,
         'tcpts_stddev': None,
-        'tcpts_slopes':None}
+        'tcpts_slopes': None}
 
 if not options.no_tcpts:
-    sys.stderr.write("INFO: Probing target for TCP timestamp precision...\n")
+    print("INFO: Probing target for TCP timestamp precision...")
     sniffer_fp = tempfile.NamedTemporaryFile('w+t')
     sniffer = startSniffer(host_ip, port, sniffer_fp.name)
     time.sleep(1.0)
+
     ports = runTimestampProbes(host_ip, port, hostname, 12)
     time.sleep(1.0)
+
     stopSniffer(sniffer)
+
     sniffer_fp.seek(0)
-    mean,stddev,slopes = computeTimestampPrecision(sniffer_fp, ports)
-    meta = {'tcpts_mean':mean,'tcpts_stddev':stddev,'tcpts_slopes':json.dumps(slopes)}
+    mean, stddev, slopes = computeTimestampPrecision(sniffer_fp, ports)
+    meta = {'tcpts_mean': mean,
+            'tcpts_stddev': stddev,
+            'tcpts_slopes': json.dumps(slopes)}
     
-if meta['tcpts_mean'] == None:
-    sys.stderr.write("INFO: TCP timestamps not supported.\n")
-elif meta['tcpts_stddev'] == None:
-    sys.stderr.write("INFO: Not enough TCP timestamp samples.\n")
+if meta['tcpts_mean'] is None:
+    print("INFO: TCP timestamps not supported.")
+elif meta['tcpts_stddev'] is None:
+    print("INFO: Not enough TCP timestamp samples.")
 elif meta['tcpts_stddev']/meta['tcpts_mean'] > 0.05:
-    sys.stderr.write("INFO: TCP timestamp precision is inconsistent.\n")
-    sys.stderr.write("INFO:     mean=%(tcpts_mean)f,stddev=%(tcpts_stddev)f,samples=%(tcpts_slopes)s\n"
+    print("INFO: TCP timestamp precision is inconsistent.")
+    print("INFO:     mean=%(tcpts_mean)f,stddev=%(tcpts_stddev)f,samples=%(tcpts_slopes)s"
                      % meta)
 else:
-    sys.stderr.write("INFO: Estimated TCP timestamp precision: %f (stddev: %f, %f%%)\n"
-                     % (meta['tcpts_mean'], meta['tcpts_stddev'], 100*meta['tcpts_stddev']/meta['tcpts_mean']))
+    args = (meta['tcpts_mean'],
+            meta['tcpts_stddev'],
+            100*meta['tcpts_stddev']/meta['tcpts_mean'])
+    print("INFO: Estimated TCP timestamp precision: %f (stddev: %f, %f%%)"
+                     % args)
 
 db.addMeta(meta)
 
@@ -128,8 +150,8 @@ def findNextSampleID(db):
     cursor = db.conn.cursor()
     cursor.execute("SELECT max(sample) FROM probes")
     row = cursor.fetchone()
-    if row != None and row[0] != None:
-        return row[0]+1
+    if row is not None and row[0] is not None:
+        return row[0] + 1
 
     return 0
 
@@ -138,7 +160,7 @@ def collectSamples(db, sample_type, count, sniffer):
     sniffer.start()
 
     if not sniffer.is_running():
-        sys.stderr.write('ERROR: Sniffer did not start...\n')
+        print('ERROR: Sniffer did not start...')
         return
         
     sid = findNextSampleID(db)
@@ -146,15 +168,18 @@ def collectSamples(db, sample_type, count, sniffer):
         sample_order = list(cases.items())
         random.shuffle(sample_order)
         if sample_type.endswith('null'):
-            for i in range(1,len(sample_order)):
-                sample_order[i] = (sample_order[i][0],sample_order[0][1])
+            for i in range(1, len(sample_order)):
+                sample_order[i] = (sample_order[i][0], sample_order[0][1])
             random.shuffle(sample_order)
             
         results = []
         now = int(time.time()*1000000000)
         for i in range(len(sample_order)):
-            results.append(fetch({'sample':sid, 'test_case':sample_order[i][0],
-                                  'type':sample_type, 'tc_order':i, 'time_of_day':now},
+            results.append(fetch({'sample': sid,
+                                  'test_case': sample_order[i][0],
+                                  'type': sample_type,
+                                  'tc_order': i,
+                                  'time_of_day': now},
                                  sample_order[i][1]))
 
         print(results)
@@ -162,15 +187,17 @@ def collectSamples(db, sample_type, count, sniffer):
         db.conn.commit()
         sid += 1
 
-    time.sleep(2.0) # Give sniffer a chance to collect remaining packets
+    # Give sniffer a chance to collect remaining packets
+    time.sleep(2.0)
     sniffer.stop()
+    
     #print(sniffer.openPacketLog().read())
     start = time.time()
     associatePackets(sniffer.openPacketLog(), db)
     end = time.time()
+
     print("associate time:", end-start)
     
-
 
 if options.no_control:
     num_control = 0
@@ -178,7 +205,7 @@ else:
     num_control = int(num_samples*2/5)
 
 num_train = int((num_samples-num_control)/3)
-num_test = num_samples-num_train-num_control
+num_test = num_samples - num_train - num_control
 
 sample_types = [('train', num_train),
                 ('train_null', num_control),
@@ -206,6 +233,8 @@ end = time.time()
 print("analyzed %d probes' packets in: %f" % (num_probes, end-start))
 
 
-setPowersave(True) # XXX: test this to see if it actually helps
-setLowLatency(False) # XXX: test this to see if it actually helps
+# XXX: test this to see if it actually helps
+setPowersave(True)
+setLowLatency(False)
+
 setTCPTimestamps(tcpts_previous)

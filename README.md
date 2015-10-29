@@ -50,14 +50,14 @@ Our goal for a usage workflow is this:
    samples.  This will then tell you how many samples you need to
    reliably detect the timing difference.
 
-3. Given the output from step 3 and inputs to step 1, a second script
+3. Given the output from step 2 and inputs to step 1, a second script
    generator creates an attack script for you as a starting point.  You
    customize this and run your attacks.
 
 Sounds great, yeah?  Well steps 1 and 3 aren't quite implemented yet. =\
 
 If you are really dying to use this code right now, just make a copy of
-the `trunk/bin/sampler` script and hack on it until it sends HTTP requests
+the `sampler` script and hack on it until it sends HTTP requests
 that your targeted web application expects.  Be sure to define the test
 cases appropriately.  Then run it to collect at least
 50,000 samples for each the train, test and train_null data sets
@@ -67,7 +67,7 @@ so it can tweak local networking settings and sniff packets.
 Next you can move on to step 2, where you simply run the train script
 against the database created by your sampler script:
 ```
-bin/train mysamples.db
+./train mysamples.db
 ```
 This will run for a while.  If you cancel out and re-run it, it will
 pick up where it left off.  Pay special attention to the final results
@@ -79,7 +79,7 @@ Finally, we come to step 3.  If you choose to carry out an attack, you
 will need to implement your own attack script that collects batches of
 samples, distinguishes between them using the best classifier available
 (from step 2) and then repeats as needed.  Consider starting with the
-sample script at `test/blackhat-demo/jregistrate-attack`.
+sample script at `examples/blackhat/jregistrate-attack.py`.
 
 Any questions?  See the source, watch our BlackHat presentation, read
 our research paper, or [post an issue](https://github.com/ecbftw/nanown/issues) on GitHub.
