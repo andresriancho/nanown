@@ -43,7 +43,7 @@ class snifferProcess(object):
 
     def start(self):
         self._spool = tempfile.NamedTemporaryFile('w+t')
-        self._proc = subprocess.Popen(['chrt', '-r', '99', 'nanown-listen',
+        self._proc = subprocess.Popen(['chrt', '-r', '99', './nanown-listen',
                                        self.my_iface, self.my_ip,
                                        self.target_ip, "%d" % self.target_port,
                                        self._spool.name, '0'])
@@ -72,7 +72,7 @@ def startSniffer(target_ip, target_port, output_file):
     my_ip = getLocalIP(target_ip, target_port)
     my_iface = getIfaceForIP(my_ip)
     return subprocess.Popen(
-        ['chrt', '-r', '99', 'nanown-listen', my_iface, my_ip,
+        ['chrt', '-r', '99', './nanown-listen', my_iface, my_ip,
                              target_ip, "%d" % target_port, output_file, '0'])
 
 
