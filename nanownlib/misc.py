@@ -21,7 +21,7 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
     #  FROM (SELECT probes.sample s,packet_rtt FROM probes,trim_analysis WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case=:unusual_case AND probes.type in ('train','test') AND 1 NOT IN (select 1 from probes p,trim_analysis t WHERE p.sample=s AND t.probe_id=p.id AND t.suspect LIKE '%R%')) u
     #"""
     query = """
-      SELECT packet_rtt-(SELECT avg(packet_rtt) FROM probes,trim_analysis
+      SELECT packet_rtt-(SELECT avg(packet_rtt) FROM probes, trim_analysis
                          WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case!=:unusual_case AND sample=u.s AND probes.type in ('train','test'))
       FROM (SELECT probes.sample s,packet_rtt FROM probes,trim_analysis WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case=:unusual_case AND probes.type in ('train','test')) u
     """
@@ -32,7 +32,7 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
               'rtrim': rtrim,
               'unusual_case': unusual_case}
     cursor.execute(query, params)
-    differences = [row[0] for row in cursor]
+    differences = [row[0] for row in cursor if row[0] is not None]
 
     logging.debug('Calculating stats')
     logging.debug(differences)
