@@ -14,11 +14,12 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
     septasummary and mad for each dist of differences
     """
     cursor = db.conn.cursor()
-    query = """
-      SELECT packet_rtt-(SELECT avg(packet_rtt) FROM probes,trim_analysis
-                         WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case!=:unusual_case AND sample=u.s AND probes.type in ('train','test'))
-      FROM (SELECT probes.sample s,packet_rtt FROM probes,trim_analysis WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case=:unusual_case AND probes.type in ('train','test') AND 1 NOT IN (select 1 from probes p,trim_analysis t WHERE p.sample=s AND t.probe_id=p.id AND t.suspect LIKE '%R%')) u
-    """
+    #query = """
+    #  SELECT packet_rtt-(SELECT avg(packet_rtt) FROM probes,trim_analysis
+    #                     WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case!=:unusual_case AND sample=u.s AND probes.type in ('train','test'))
+    #  FROM (SELECT probes.sample s,packet_rtt FROM probes,trim_analysis WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case=:unusual_case AND probes.type in ('train','test') AND 1 NOT IN (select 1 from probes p,trim_analysis t WHERE p.sample=s AND t.probe_id=p.id AND t.suspect LIKE '%R%')) u
+    #"""
+
     query = """
       SELECT packet_rtt-(SELECT avg(packet_rtt) FROM probes,trim_analysis
                          WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case!=:unusual_case AND sample=u.s AND probes.type in ('train','test'))
@@ -52,6 +53,8 @@ def analyzeProbes(db, trim=None, recompute=False):
         db.conn.commit()
 
     def loadPackets(db):
+        print('Loading packets...')
+
         cursor = db.conn.cursor()
         # cursor.execute("SELECT * FROM packets ORDER BY probe_id")
         cursor.execute(
@@ -69,9 +72,13 @@ def analyzeProbes(db, trim=None, recompute=False):
                 entry = []
             entry.append(dict(p))
         ret_val.append((probe_id, entry))
+
+        print('Done!')
         return ret_val
 
     def processPackets(packet_cache, strim, rtrim):
+        print('Processing packets...')
+
         sent_tally = []
         rcvd_tally = []
         analyses = []
@@ -82,13 +89,17 @@ def analyzeProbes(db, trim=None, recompute=False):
                 analyses.append(analysis)
                 sent_tally.append(s)
                 rcvd_tally.append(r)
-            except Exception as e:
+            except Exception:
                 # traceback.print_exc()
-                sys.stderr.write(
-                    "WARN: couldn't find enough packets for probe_id=%s\n" % probe_id)
+                msg = "WARN: couldn't find enough packets for probe_id=%s\n"
+                sys.stderr.write(msg % probe_id)
+
         db.addTrimAnalyses(analyses)
         db.conn.commit()
-        return statistics.mode(sent_tally), statistics.mode(rcvd_tally)
+
+        result = statistics.mode(sent_tally), statistics.mode(rcvd_tally)
+        print('Done!')
+        return result
 
     # start = time.time()
     packet_cache = loadPackets(db)
@@ -99,21 +110,26 @@ def analyzeProbes(db, trim=None, recompute=False):
         processPackets(packet_cache, best_strim, best_rtrim)
     else:
         num_sent, num_rcvd = processPackets(packet_cache, 0, 0)
-        print("num_sent: %d, num_rcvd: %d" % (num_sent, num_rcvd))
+        args = (num_sent, num_rcvd)
+        print("Process packet output num_sent: %d, num_rcvd: %d" % args)
 
         for strim in range(0, num_sent):
             for rtrim in range(0, num_rcvd):
-                # print(strim,rtrim)
+                args = (strim, rtrim)
+                print('Processing packets strim: %s | rtrim %s' % args)
+
                 if strim == 0 and rtrim == 0:
-                    continue  # no point in doing 0,0 again
+                    # no point in doing 0,0 again
+                    continue
                 processPackets(packet_cache, strim, rtrim)
 
         unusual_case, delta = findUnusualTestCase(db, (0, 0))
         evaluations = {}
+
         for strim in range(0, num_sent):
             for rtrim in range(0, num_rcvd):
-                evaluations[(strim, rtrim)] = evaluateTrim(
-                    db, unusual_case, strim, rtrim)
+                evaluations[(strim, rtrim)] = evaluateTrim(db, unusual_case,
+                                                           strim, rtrim)
 
         pprint.pprint(evaluations)
 
