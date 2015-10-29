@@ -19,13 +19,13 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
     #                     WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case!=:unusual_case AND sample=u.s AND probes.type in ('train','test'))
     #  FROM (SELECT probes.sample s,packet_rtt FROM probes,trim_analysis WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case=:unusual_case AND probes.type in ('train','test') AND 1 NOT IN (select 1 from probes p,trim_analysis t WHERE p.sample=s AND t.probe_id=p.id AND t.suspect LIKE '%R%')) u
     #"""
-
     query = """
       SELECT packet_rtt-(SELECT avg(packet_rtt) FROM probes,trim_analysis
                          WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case!=:unusual_case AND sample=u.s AND probes.type in ('train','test'))
       FROM (SELECT probes.sample s,packet_rtt FROM probes,trim_analysis WHERE sent_trimmed=:strim AND rcvd_trimmed=:rtrim AND trim_analysis.probe_id=probes.id AND probes.test_case=:unusual_case AND probes.type in ('train','test')) u
     """
     # TODO: check for "N" in suspect field and return a flag
+    print('Getting information from SQLite DB')
 
     params = {'strim': strim,
               'rtrim': rtrim,
@@ -33,7 +33,11 @@ def evaluateTrim(db, unusual_case, strim, rtrim):
     cursor.execute(query, params)
     differences = [row[0] for row in cursor]
 
-    return septasummary(differences), mad(differences)
+    print('Calculating stats')
+    septasummary_result = septasummary(differences)
+    mad_result = mad(differences)
+
+    return septasummary_result, mad_result
 
 
 def analyzeProbes(db, trim=None, recompute=False):
@@ -115,10 +119,15 @@ def analyzeProbes(db, trim=None, recompute=False):
         args = (num_sent, num_rcvd)
         print("Process packet output num_sent: %d, num_rcvd: %d" % args)
 
+        current = 0
+        total = num_sent * num_rcvd
+
         for strim in range(0, num_sent):
             for rtrim in range(0, num_rcvd):
-                args = (strim, rtrim)
-                print('Processing packets strim: %s | rtrim %s' % args)
+                current += 1
+
+                args = (current, total, strim, rtrim)
+                print('[%s/%s] Processing packets strim: %s | rtrim %s' % args)
 
                 if strim == 0 and rtrim == 0:
                     # no point in doing 0,0 again
@@ -128,8 +137,11 @@ def analyzeProbes(db, trim=None, recompute=False):
         unusual_case, delta = findUnusualTestCase(db, (0, 0))
         evaluations = {}
 
+        current = 0
         for strim in range(0, num_sent):
             for rtrim in range(0, num_rcvd):
+                current += 1
+                print('Evaluate trim %s/%s' % (current, total))
                 evaluations[(strim, rtrim)] = evaluateTrim(db, unusual_case,
                                                            strim, rtrim)
 
